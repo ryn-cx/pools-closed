@@ -64,7 +64,7 @@ class ShowModel(BaseModel):
     collection_type: str | None = Field(None, alias='collectionType')
     tv_rating: str | None = Field(None, alias='tvRating')
     episode_count: int | None = Field(None, alias='episodeCount')
-    metadata: Metadata | None = None
+    metadata: Any | Metadata | None = None
     hero: Hero | None = None
     theme: Theme | None = None
     marathon: Any | Marathon | None = None

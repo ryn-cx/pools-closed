@@ -57,14 +57,14 @@ class ShowModel(BaseModel):
     title: str
     headline: None
     tune_in: str | None = Field(..., alias='tuneIn')
-    season_order: str = Field(..., alias='seasonOrder')
-    include_clips: bool = Field(..., alias='includeClips')
-    adfuel_registry_url: str = Field(..., alias='adfuelRegistryURL')
+    season_order: str | None = Field(..., alias='seasonOrder')
+    include_clips: bool | None = Field(..., alias='includeClips')
+    adfuel_registry_url: str | None = Field(..., alias='adfuelRegistryURL')
     collection_id: str = Field(..., alias='collectionId')
-    collection_type: str = Field(..., alias='collectionType')
+    collection_type: str | None = Field(..., alias='collectionType')
     tv_rating: str | None = Field(..., alias='tvRating')
     episode_count: int = Field(..., alias='episodeCount')
-    metadata: Metadata
+    metadata: Metadata | None
     hero: Hero
     theme: Theme
     marathon: Marathon | None
