@@ -9,139 +9,198 @@ from logging import NullHandler, getLogger
 from typing import Any
 
 from pools_closed.base_api_endpoint import BaseEndpoint
-from pools_closed.exceptions import ResourceNotFoundError, ShowNotFoundError
+from pools_closed.exceptions import ShowNotFoundError
 from pools_closed.show.models import ShowModel, model_validate_json
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
 
-type ApolloState = dict[str, Any]
-"""The Apollo cache a show page was rendered from, keyed by cache id."""
+VIDEO_FIELDS = """
+id
+collectionSlug
+auth
+description
+duration
+episodeNumber
+expirationDate
+firstAiring
+launchDate
+poster
+seasonNumber
+slug
+title
+tvRating
+type
+"""
+"""The fields the site reads a video by."""
+
+SHOW_QUERY = f"""
+query Show($show: String, $cursor: String) {{
+  show(slug: $show) {{
+    slug
+    title
+    headline {{
+      launchDate
+      link
+      text
+    }}
+    tuneIn
+    seasonOrder
+    includeClips
+    adfuelRegistryURL
+    metadata {{
+      description
+      thumbnail
+      title
+    }}
+    hero {{
+      imageAlignment
+      imageURL
+      marathonCallout
+      marathonImageURL
+      mobileImageURL
+    }}
+    theme {{
+      backgroundColor
+    }}
+    marathon {{
+      id
+      slug
+    }}
+    collection {{
+      id
+      type
+      tvRating
+      seasons(types: EPISODE, liveOnly: true, sort: ASC) {{
+        nodes {{
+          number
+          name
+          episodeCount: videos(types: EPISODE, first: 0, liveOnly: false) {{
+            totalCount
+          }}
+          videos(sort: ["episodeNumber", "launchDate:desc"], first: 1000) {{
+            nodes {{
+              {VIDEO_FIELDS}
+            }}
+          }}
+        }}
+      }}
+      clipSeasons: seasons(types: CLIP, sort: ASC) {{
+        nodes {{
+          number
+          name
+        }}
+      }}
+      clips: videos(
+        after: $cursor
+        types: CLIP
+        first: 1000
+        seasonsOnly: true
+        sort: ["seasonNumber", "episodeNumber"]
+      ) {{
+        pageInfo {{
+          endCursor
+          hasNextPage
+        }}
+        nodes {{
+          {VIDEO_FIELDS}
+        }}
+      }}
+    }}
+  }}
+}}
+"""
+"""What the show page asks for, in the query a download starts with."""
+
+CLIPS_QUERY = f"""
+query ShowClips($show: String, $cursor: String) {{
+  show(slug: $show) {{
+    slug
+    collection {{
+      id
+      clips: videos(
+        after: $cursor
+        types: CLIP
+        first: 1000
+        seasonsOnly: true
+        sort: ["seasonNumber", "episodeNumber"]
+      ) {{
+        pageInfo {{
+          endCursor
+          hasNextPage
+        }}
+        nodes {{
+          {VIDEO_FIELDS}
+        }}
+      }}
+    }}
+  }}
+}}
+"""
+"""What a show with more clips than one page holds is asked for the rest by."""
 
 
 # TODO: Validate
-def _resolve(state: ApolloState, value: Any) -> Any:  # noqa: ANN401
-    """Return what a value holds, following it into the cache when it is a reference."""
-    if isinstance(value, dict) and value.get("type") == "id":
-        return state.get(value["id"])
-    return value
-
-
-# TODO: Validate
-def _without_typename(value: Any) -> Any:  # noqa: ANN401
-    """Return an object without the type name Apollo files it under."""
-    if not isinstance(value, dict):
-        return value
-    return {name: field for name, field in value.items() if name != "__typename"}
-
-
-# TODO: Validate
-def _connections(
-    state: ApolloState,
-    holder: dict[str, Any],
-    field_name: str,
-) -> list[dict[str, Any]]:
-    """Return what every field named `field_name` on `holder` points at.
-
-    A field is cached under the name it was queried with, arguments and all, so
-    the same field shows up once per set of arguments the page asked for.
-    """
+def _episode_seasons(collection: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return every season of a show, with the episodes that belong to it."""
     return [
-        resolved
-        for name, value in holder.items()
-        if name.startswith(f"{field_name}(")
-        and isinstance(resolved := _resolve(state, value), dict)
+        {
+            "number": season["number"],
+            "name": season["name"],
+            "type": "EPISODE",
+            "episodeCount": season["episodeCount"]["totalCount"],
+            "episodes": season["videos"]["nodes"],
+        }
+        for season in collection["seasons"]["nodes"]
     ]
 
 
 # TODO: Validate
-def _episodes(state: ApolloState, season: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return every episode of a season, in episode order."""
-    episodes_by_id: dict[str, dict[str, Any]] = {}
-    for connection in _connections(state, season, "videos"):
-        for node in connection.get("nodes") or []:
-            episode = _without_typename(_resolve(state, node))
-            if isinstance(episode, dict) and "title" in episode:
-                episodes_by_id[episode["id"]] = episode
-    return sorted(
-        episodes_by_id.values(),
-        key=lambda episode: (
-            episode.get("episodeNumber") is None,
-            episode.get("episodeNumber") or 0,
-        ),
-    )
+def _clip_seasons(collection: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return every clip season of a show, with the clips that belong to it.
 
-
-# TODO: Validate
-def _episode_count(state: ApolloState, season: dict[str, Any]) -> int | None:
-    """Return how many episodes the site counts for a season."""
-    counts = [
-        connection["totalCount"]
-        for connection in _connections(state, season, "videos")
-        if "totalCount" in connection
-    ]
-    return max(counts) if counts else None
-
-
-# TODO: Validate
-def _seasons(state: ApolloState, collection: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return every season of a show, in season order, with its episodes.
-
-    A page asks for its seasons more than once, sorted differently each time, so
-    a season that shows up twice is kept once with the most episodes found for
-    it.
+    A clip is filed under a season of its own, numbered apart from the seasons
+    the episodes are filed under.
     """
-    seasons_by_number: dict[Any, dict[str, Any]] = {}
-    for connection in _connections(state, collection, "seasons"):
-        for node in connection.get("nodes") or []:
-            season = _resolve(state, node)
-            if not isinstance(season, dict):
-                continue
-            episodes = _episodes(state, season)
-            recorded = seasons_by_number.get(season.get("number"))
-            if recorded is not None and len(recorded["episodes"]) >= len(episodes):
-                continue
-            seasons_by_number[season.get("number")] = {
-                "number": season.get("number"),
-                "name": season.get("name"),
-                "episodeCount": _episode_count(state, season),
-                "episodes": episodes,
-            }
-    return sorted(
-        seasons_by_number.values(),
-        key=lambda season: (season["number"] is None, season["number"] or 0),
-    )
+    clips_by_season: dict[Any, list[dict[str, Any]]] = {}
+    for clip in collection["clips"]["nodes"]:
+        clips_by_season.setdefault(clip["seasonNumber"], []).append(clip)
+    return [
+        {
+            "number": season["number"],
+            "name": season["name"],
+            "type": "CLIP",
+            "episodeCount": len(clips_by_season.get(season["number"], [])),
+            "episodes": clips_by_season.get(season["number"], []),
+        }
+        for season in collection["clipSeasons"]["nodes"]
+    ]
 
 
 # TODO: Validate
 def extract_show(data: str) -> dict[str, Any]:
-    """Parse a downloaded show page into the show, its seasons and its episodes.
-
-    A show page is rendered from an Apollo cache, which is every object the page
-    needs filed flat under its own key and pointed at by reference. This walks
-    those references and writes the show back out as one object.
-    """
-    state = json.loads(data)["props"]["pageProps"]["__APOLLO_STATE__"]
-    show = _resolve(state, next(iter(state["ROOT_QUERY"].values())))
-    collection = _resolve(state, show.get("collection")) or {}
-    seasons = _seasons(state, collection)
+    """Parse a downloaded show into the show, its seasons and its episodes."""
+    show = json.loads(data)["show"]
+    collection = show["collection"] or {}
+    episode_seasons = _episode_seasons(collection) if collection else []
+    clip_seasons = _clip_seasons(collection) if collection else []
     return {
-        "slug": show.get("slug"),
-        "title": show.get("title"),
-        "headline": show.get("headline"),
-        "tuneIn": show.get("tuneIn"),
-        "seasonOrder": show.get("seasonOrder"),
-        "includeClips": show.get("includeClips"),
-        "adfuelRegistryURL": show.get("adfuelRegistryURL"),
+        "slug": show["slug"],
+        "title": show["title"],
+        "headline": show["headline"],
+        "tuneIn": show["tuneIn"],
+        "seasonOrder": show["seasonOrder"],
+        "includeClips": show["includeClips"],
+        "adfuelRegistryURL": show["adfuelRegistryURL"],
         "collectionId": collection.get("id"),
         "collectionType": collection.get("type"),
         "tvRating": collection.get("tvRating"),
-        "episodeCount": sum(season["episodeCount"] or 0 for season in seasons),
-        "metadata": _without_typename(_resolve(state, show.get("metadata"))),
-        "hero": _without_typename(_resolve(state, show.get("hero"))),
-        "theme": _without_typename(_resolve(state, show.get("theme"))),
-        "marathon": _without_typename(_resolve(state, show.get("marathon"))),
-        "seasons": seasons,
+        "episodeCount": sum(season["episodeCount"] for season in episode_seasons),
+        "metadata": show["metadata"],
+        "hero": show["hero"],
+        "theme": show["theme"],
+        "marathon": show["marathon"],
+        "seasons": episode_seasons + clip_seasons,
     }
 
 
@@ -160,30 +219,47 @@ class Show(BaseEndpoint):
 
     # TODO: Validate
     def download(self, slug: str) -> str:
-        """Download the show page.
+        """Download the show, its seasons, its episodes and its clips.
 
         Raises:
             ShowNotFoundError: If no show is under that slug.
         """
         log_id = self.get_log_id(self.download, locals())
-        try:
-            response = self._client.download(
-                endpoint=f"videos/{slug}",
-                params={},
-                headers={"referer": "https://www.adultswim.com/videos"},
-                log_id=log_id,
+        document = self._client.graphql(SHOW_QUERY, {"show": slug}, log_id)
+        self._validate_download(document, slug)
+        self._download_remaining_clips(document, slug, log_id)
+        return json.dumps(document)
+
+    # TODO: Validate
+    def _download_remaining_clips(
+        self,
+        document: dict[str, Any],
+        slug: str,
+        log_id: str,
+    ) -> None:
+        """Add the clips that did not fit in the first page to a downloaded show."""
+        collection = document["show"]["collection"]
+        while collection and collection["clips"]["pageInfo"]["hasNextPage"]:
+            page = self._client.graphql(
+                CLIPS_QUERY,
+                {"show": slug, "cursor": collection["clips"]["pageInfo"]["endCursor"]},
+                log_id,
             )
-        except ResourceNotFoundError as err:
-            raise ShowNotFoundError(slug, err.status_code, err.response) from err
-        return self._validate_download(response, slug)
+            clips = page["show"]["collection"]["clips"]
+            collection["clips"]["nodes"] += clips["nodes"]
+            collection["clips"]["pageInfo"] = clips["pageInfo"]
 
     # TODO: Validate
     @staticmethod
-    def _validate_download(response: str, slug: str) -> str:
-        """Check that the page is the one that was asked for."""
-        if extract_show(response)["slug"] != slug:
-            raise ShowNotFoundError(slug, HTTPStatus.OK, response)
-        return response
+    def _validate_download(document: dict[str, Any], slug: str) -> None:
+        """Check that the show is the one that was asked for.
+
+        Raises:
+            ShowNotFoundError: If no show is under that slug.
+        """
+        show = document["show"]
+        if show is None or show["slug"] != slug:
+            raise ShowNotFoundError(slug, HTTPStatus.OK, document)
 
     # TODO: Validate
     def load(self, data: str, log_id: str = "") -> ShowModel:

@@ -15,6 +15,8 @@ SLUGS = [
     pytest.param("robot-chicken", id="a show with many seasons"),
     # https://www.adultswim.com/videos/our-bodies
     pytest.param("our-bodies", id="an online original"),
+    # https://www.adultswim.com/videos/toonami
+    pytest.param("toonami", id="a show whose videos are all clips"),
 ]
 
 

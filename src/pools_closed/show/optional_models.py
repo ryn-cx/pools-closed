@@ -48,6 +48,7 @@ class Season(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
     number: int | None = None
     name: str | None = None
+    type: str | None = None
     episode_count: int | None = Field(None, alias='episodeCount')
     episodes: list[Episode] | None = None
 
@@ -64,7 +65,7 @@ class ShowModel(BaseModel):
     collection_type: str | None = Field(None, alias='collectionType')
     tv_rating: str | None = Field(None, alias='tvRating')
     episode_count: int | None = Field(None, alias='episodeCount')
-    metadata: Any | Metadata | None = None
+    metadata: Metadata | None = None
     hero: Hero | None = None
     theme: Theme | None = None
     marathon: Any | Marathon | None = None

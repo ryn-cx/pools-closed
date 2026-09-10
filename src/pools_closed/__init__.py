@@ -18,6 +18,9 @@ logger.addHandler(NullHandler())
 
 API_DOMAIN = "www.adultswim.com"
 
+GRAPHQL_URL = "https://api.adultswim.com/v1"
+"""The API a page calls for what the server did not render into it."""
+
 NEXT_DATA_PATTERN = re.compile(
     r'<script id="__NEXT_DATA__"[^>]*>(?P<json>.*?)</script>',
     re.DOTALL,
@@ -53,6 +56,10 @@ class PoolsClosed:
         return {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "accept-language": "en-US,en;q=0.9",
+            "user-agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+            ),
             "sec-fetch-dest": "document",
             "sec-fetch-mode": "navigate",
             "sec-fetch-site": "same-origin",
@@ -91,6 +98,38 @@ class PoolsClosed:
         logger.debug("Downloaded %s (%.4f s)", log_id, monotonic() - start)
         sleep(self.sleep_time)
         return self._extract_next_data(response.text)
+
+    # TODO: Validate
+    def graphql(
+        self,
+        query: str,
+        variables: dict[str, Any],
+        log_id: str,
+    ) -> dict[str, Any]:
+        """Runs a GraphQL query and returns the data it answers with."""
+        logger.debug("Downloading: %s", log_id)
+        start = monotonic()
+        response = self.get_around_client.post(
+            GRAPHQL_URL,
+            json={"query": query, "variables": variables},
+            headers={
+                **self._default_headers(),
+                "accept": "*/*",
+                "content-type": "application/json",
+                "origin": f"https://{API_DOMAIN}",
+                "referer": f"https://{API_DOMAIN}/videos",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-site",
+            },
+        )
+
+        if response.status_code != HTTPStatus.OK:
+            raise HTTPError(response.status_code, response.text)
+
+        logger.debug("Downloaded %s (%.4f s)", log_id, monotonic() - start)
+        sleep(self.sleep_time)
+        return response.json()["data"]
 
     # TODO: Validate
     @staticmethod
