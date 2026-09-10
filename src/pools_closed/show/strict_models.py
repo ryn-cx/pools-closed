@@ -56,7 +56,7 @@ class ShowModel(BaseModel):
     slug: str
     title: str
     headline: None
-    tune_in: None = Field(..., alias='tuneIn')
+    tune_in: str | None = Field(..., alias='tuneIn')
     season_order: str = Field(..., alias='seasonOrder')
     include_clips: bool = Field(..., alias='includeClips')
     adfuel_registry_url: str = Field(..., alias='adfuelRegistryURL')

@@ -3,11 +3,11 @@
 
 from pathlib import Path
 
-FILES_PATH = Path(__file__).parent / "_files"
-"""Where the recorded responses live."""
+from good_ass_pydantic_integrator.recordings import GeneratorPaths
 
-IDS_PATH = Path(__file__).parent / "ids"
-"""Where the ids each model's responses are recorded for live."""
-
-POOLS_CLOSED_PATH = Path(__file__).parent.parent / "src" / "pools_closed"
-"""The package the models are written into."""
+GENERATOR_PATHS = GeneratorPaths(
+    files_path=Path(__file__).parent / "_files",
+    ids_path=Path(__file__).parent / "ids",
+    package_path=Path(__file__).parent.parent / "src" / "",
+)
+"""Where the recordings, the ids they came from, and the models live."""

@@ -15,26 +15,22 @@ logger.addHandler(NullHandler())
 
 
 # TODO: Validate
-def read_shows(data: str) -> dict[str, Any]:
-    """Parse a downloaded videos page and return the part that lists the shows.
-
-    `load` reads a downloaded page with this, and the model generator reads the
-    recorded pages with it too, so the two can never disagree.
-    """
+def extract_shows(data: str) -> dict[str, Any]:
+    """Parse a downloaded videos page and return the part that lists the shows."""
     page: dict[str, Any] = json.loads(data)
     return page["props"]["pageProps"]
 
 
 # TODO: Validate
 class Shows(BaseEndpoint):
-    """Manage the videos page, which lists every show on the site.
+    """Contains the videos page, which lists every show on the site.
 
     Source: https://www.adultswim.com/videos
     """
 
     # TODO: Validate
     def __call__(self) -> ShowsModel:
-        """Look the videos page up and return the model it is read into."""
+        """Download and parse the videos page file."""
         return self.load(self.download(), self.default_log_id)
 
     # TODO: Validate
@@ -49,5 +45,5 @@ class Shows(BaseEndpoint):
 
     # TODO: Validate
     def load(self, data: str, log_id: str = "") -> ShowsModel:
-        """Read a downloaded videos page into its model."""
-        return model_validate_json(read_shows(data), log_id or self.default_log_id)
+        """Load a videos file into its model."""
+        return model_validate_json(extract_shows(data), log_id or self.default_log_id)

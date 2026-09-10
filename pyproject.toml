@@ -36,6 +36,7 @@ ignore_errors = true
 select = ["ALL"]
 ignore = [
   "CPY001",  # Copyright information is stored in LICENSE.
+  "D100",  # Modules do not need a docstring.
   "FIX002",  # TODO comments are allowed.
   "TD002",  # TODO comments do not need an author.
   "TD003",  # TODO comments do not need an issue link.

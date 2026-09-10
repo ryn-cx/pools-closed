@@ -11,5 +11,12 @@
         "PYTHONPATH": "${workspaceFolder}"
     },
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
-    "python.terminal.executeInFileDir": false
+    "python.terminal.executeInFileDir": false,
+    "python-envs.pythonProjects": [
+        {
+            "path": ".",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ]
 }

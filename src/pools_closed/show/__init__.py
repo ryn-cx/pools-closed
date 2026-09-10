@@ -114,15 +114,12 @@ def _seasons(state: ApolloState, collection: dict[str, Any]) -> list[dict[str, A
 
 
 # TODO: Validate
-def read_show(data: str) -> dict[str, Any]:
+def extract_show(data: str) -> dict[str, Any]:
     """Parse a downloaded show page into the show, its seasons and its episodes.
 
     A show page is rendered from an Apollo cache, which is every object the page
     needs filed flat under its own key and pointed at by reference. This walks
     those references and writes the show back out as one object.
-
-    `load` reads a downloaded page with this, and the model generator reads the
-    recorded pages with it too, so the two can never disagree.
     """
     state = json.loads(data)["props"]["pageProps"]["__APOLLO_STATE__"]
     show = _resolve(state, next(iter(state["ROOT_QUERY"].values())))
@@ -150,14 +147,14 @@ def read_show(data: str) -> dict[str, Any]:
 
 # TODO: Validate
 class Show(BaseEndpoint):
-    """Manage the show file, which is a show with its seasons and episodes.
+    """Contains the show file, which is a show with its seasons and episodes.
 
     Source: https://www.adultswim.com/videos/{slug}
     """
 
     # TODO: Validate
     def __call__(self, slug: str) -> ShowModel:
-        """Look the show up and return the model it is read into."""
+        """Download and parse the show file."""
         log_id = self.get_log_id(self.__call__, locals())
         return self.load(self.download(slug), log_id)
 
@@ -184,15 +181,11 @@ class Show(BaseEndpoint):
     @staticmethod
     def _validate_download(response: str, slug: str) -> str:
         """Check that the page is the one that was asked for."""
-        if read_show(response)["slug"] != slug:
+        if extract_show(response)["slug"] != slug:
             raise ShowNotFoundError(slug, HTTPStatus.OK, response)
         return response
 
     # TODO: Validate
     def load(self, data: str, log_id: str = "") -> ShowModel:
-        """Read a downloaded show page into its model.
-
-        The page is written back out as the show, its seasons and its episodes
-        before it is read.
-        """
-        return model_validate_json(read_show(data), log_id or self.default_log_id)
+        """Load a show page into its model."""
+        return model_validate_json(extract_show(data), log_id or self.default_log_id)

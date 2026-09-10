@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from pools_closed.exceptions import ShowNotFoundError
-from pools_closed.show.models import ShowModel
-from tests.utils import RecordedEndpoint
 
 if TYPE_CHECKING:
     from pools_closed import PoolsClosed
@@ -21,22 +19,9 @@ SLUGS = [
 
 
 # TODO: Validate
-class ShowTest(RecordedEndpoint):
-    MODEL = ShowModel
-    # Episodes come and go from the site as their licenses run out.
-    IGNORED = ("ShowModel.seasons", "ShowModel.episode_count")
-
-
-# TODO: Validate
 @pytest.mark.parametrize("slug", SLUGS)
 def test_download(client: PoolsClosed, slug: str) -> None:
-    ShowTest.download_test(slug, lambda: client.show.download(slug))
-
-
-# TODO: Validate
-@pytest.mark.parametrize("slug", SLUGS)
-def test_parse(client: PoolsClosed, slug: str) -> None:
-    show = client.show.load(ShowTest.recorded_content(slug))
+    show = client.show(slug)
     assert show.slug == slug
     assert show.seasons
     for season in show.seasons:
@@ -45,13 +30,6 @@ def test_parse(client: PoolsClosed, slug: str) -> None:
 
 
 # TODO: Validate
-@pytest.mark.parametrize(
-    "slug",
-    [pytest.param("show-that-does-not-exist", id="show that does not exist")],
-)
-def test_download_invalid(client: PoolsClosed, slug: str) -> None:
-    ShowTest.error_test(
-        slug,
-        lambda: client.show.download(slug),
-        ShowNotFoundError,
-    )
+def test_download_invalid(client: PoolsClosed) -> None:
+    with pytest.raises(ShowNotFoundError):
+        client.show.download("show-that-does-not-exist")
