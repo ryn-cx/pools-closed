@@ -4,31 +4,31 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class Show(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
-    title: str | None = None
-    slug: str | None = None
-    poster: str | None = None
-    url: str | None = None
-    full_seasons: bool | None = Field(None, alias='fullSeasons')
+    title: str | Any = Field(default=None, union_mode='left_to_right')
+    slug: str | Any = Field(default=None, union_mode='left_to_right')
+    poster: str | Any = Field(default=None, union_mode='left_to_right')
+    url: str | Any = Field(default=None, union_mode='left_to_right')
+    full_seasons: bool | Any = Field(None, alias='fullSeasons', union_mode='left_to_right')
 
 class FeaturedShow(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
-    title: str | None = None
-    slug: str | None = None
-    poster: str | None = None
-    url: str | None = None
-    full_seasons: bool | None = Field(None, alias='fullSeasons')
-    id: str | None = None
-    alignment: str | None = None
-    color: str | None = None
-    image: str | None = None
+    title: str | Any = Field(default=None, union_mode='left_to_right')
+    slug: str | Any = Field(default=None, union_mode='left_to_right')
+    poster: str | Any = Field(default=None, union_mode='left_to_right')
+    url: str | Any = Field(default=None, union_mode='left_to_right')
+    full_seasons: bool | Any = Field(None, alias='fullSeasons', union_mode='left_to_right')
+    id: str | Any = Field(default=None, union_mode='left_to_right')
+    alignment: str | Any = Field(default=None, union_mode='left_to_right')
+    color: str | Any = Field(default=None, union_mode='left_to_right')
+    image: str | Any = Field(default=None, union_mode='left_to_right')
 
 class ShowsModel(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
-    description: str | None = None
-    shows: list[Show] | None = None
-    thumbnail: str | None = None
-    title: str | None = None
-    featured_show: FeaturedShow | None = Field(None, alias='featuredShow')
+    description: str | Any = Field(default=None, union_mode='left_to_right')
+    shows: list[Show] | Any = Field(default=None, union_mode='left_to_right')
+    thumbnail: str | Any = Field(default=None, union_mode='left_to_right')
+    title: str | Any = Field(default=None, union_mode='left_to_right')
+    featured_show: FeaturedShow | Any = Field(None, alias='featuredShow', union_mode='left_to_right')
     _raw_input: Any = PrivateAttr(default=None)
 
     @model_validator(mode='wrap')
