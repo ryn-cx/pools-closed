@@ -3,6 +3,12 @@ from pydantic import ModelWrapValidatorHandler, PrivateAttr, model_validator
 from pydantic import ConfigDict
 from pydantic import AwareDatetime, BaseModel, Field
 
+class Headline(BaseModel):
+    model_config = ConfigDict(defer_build=True)
+    launch_date: AwareDatetime = Field(..., alias='launchDate')
+    link: None
+    text: str
+
 class Metadata(BaseModel):
     model_config = ConfigDict(defer_build=True)
     description: str
@@ -19,7 +25,7 @@ class Hero(BaseModel):
 
 class Theme(BaseModel):
     model_config = ConfigDict(defer_build=True)
-    background_color: str = Field(..., alias='backgroundColor')
+    background_color: str | None = Field(..., alias='backgroundColor')
 
 class Marathon(BaseModel):
     model_config = ConfigDict(defer_build=True)
@@ -36,8 +42,8 @@ class Episode(BaseModel):
     episode_number: int | None = Field(..., alias='episodeNumber')
     expiration_date: AwareDatetime | None = Field(..., alias='expirationDate')
     first_airing: AwareDatetime | None = Field(..., alias='firstAiring')
-    launch_date: AwareDatetime = Field(..., alias='launchDate')
-    poster: str
+    launch_date: AwareDatetime | None = Field(..., alias='launchDate')
+    poster: str | None
     season_number: int = Field(..., alias='seasonNumber')
     slug: str
     title: str
@@ -56,7 +62,7 @@ class ShowModel(BaseModel):
     model_config = ConfigDict(defer_build=True)
     slug: str
     title: str
-    headline: None
+    headline: Headline | None
     tune_in: str | None = Field(..., alias='tuneIn')
     season_order: str = Field(..., alias='seasonOrder')
     include_clips: bool = Field(..., alias='includeClips')

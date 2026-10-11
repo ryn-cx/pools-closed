@@ -3,6 +3,12 @@ from pydantic import ModelWrapValidatorHandler, PrivateAttr, model_validator
 from typing import Any
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+class Headline(BaseModel):
+    model_config = ConfigDict(extra='ignore', defer_build=True)
+    launch_date: AwareDatetime | Any = Field(None, alias='launchDate', union_mode='left_to_right')
+    link: Any | None = None
+    text: str | Any = Field(default=None, union_mode='left_to_right')
+
 class Metadata(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
     description: str | Any = Field(default=None, union_mode='left_to_right')
@@ -56,7 +62,7 @@ class ShowModel(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
     slug: str | Any = Field(default=None, union_mode='left_to_right')
     title: str | Any = Field(default=None, union_mode='left_to_right')
-    headline: Any | None = None
+    headline: Headline | Any = Field(default=None, union_mode='left_to_right')
     tune_in: str | Any = Field(None, alias='tuneIn', union_mode='left_to_right')
     season_order: str | Any = Field(None, alias='seasonOrder', union_mode='left_to_right')
     include_clips: bool | Any = Field(None, alias='includeClips', union_mode='left_to_right')

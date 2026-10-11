@@ -9,6 +9,7 @@ from .strict_models import ShowModel as StrictModel
 if TYPE_CHECKING:
     from .strict_models import (
         Episode,
+        Headline,
         Hero,
         Marathon,
         Metadata,
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 else:
     from .optional_models import (
         Episode,
+        Headline,
         Hero,
         Marathon,
         Metadata,
@@ -29,6 +31,7 @@ else:
 
 __all__ = [
     "Episode",
+    "Headline",
     "Hero",
     "Marathon",
     "Metadata",
