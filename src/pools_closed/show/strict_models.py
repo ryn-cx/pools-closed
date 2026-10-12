@@ -42,7 +42,7 @@ class Episode(BaseModel):
     episode_number: int | None = Field(..., alias='episodeNumber')
     expiration_date: AwareDatetime | None = Field(..., alias='expirationDate')
     first_airing: AwareDatetime | None = Field(..., alias='firstAiring')
-    launch_date: AwareDatetime | None = Field(..., alias='launchDate')
+    launch_date: AwareDatetime = Field(..., alias='launchDate')
     poster: str | None
     season_number: int = Field(..., alias='seasonNumber')
     slug: str
@@ -69,6 +69,7 @@ class ShowModel(BaseModel):
     adfuel_registry_url: str = Field(..., alias='adfuelRegistryURL')
     collection_id: str = Field(..., alias='collectionId')
     collection_type: str = Field(..., alias='collectionType')
+    collection_poster: str = Field(..., alias='collectionPoster')
     tv_rating: str | None = Field(..., alias='tvRating')
     episode_count: int = Field(..., alias='episodeCount')
     metadata: Metadata

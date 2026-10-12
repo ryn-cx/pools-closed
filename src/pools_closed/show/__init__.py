@@ -71,6 +71,7 @@ query Show($show: String, $cursor: String) {{
       id
       type
       tvRating
+      poster
       seasons(types: EPISODE, liveOnly: true, sort: ASC) {{
         nodes {{
           number
@@ -194,6 +195,7 @@ def extract_show(data: str) -> dict[str, Any]:
         "adfuelRegistryURL": show["adfuelRegistryURL"],
         "collectionId": collection.get("id"),
         "collectionType": collection.get("type"),
+        "collectionPoster": collection.get("poster"),
         "tvRating": collection.get("tvRating"),
         "episodeCount": sum(season["episodeCount"] for season in episode_seasons),
         "metadata": show["metadata"],

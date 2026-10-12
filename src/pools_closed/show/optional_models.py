@@ -69,6 +69,7 @@ class ShowModel(BaseModel):
     adfuel_registry_url: str | Any = Field(None, alias='adfuelRegistryURL', union_mode='left_to_right')
     collection_id: str | Any = Field(None, alias='collectionId', union_mode='left_to_right')
     collection_type: str | Any = Field(None, alias='collectionType', union_mode='left_to_right')
+    collection_poster: str | Any = Field(None, alias='collectionPoster', union_mode='left_to_right')
     tv_rating: str | Any = Field(None, alias='tvRating', union_mode='left_to_right')
     episode_count: int | Any = Field(None, alias='episodeCount', union_mode='left_to_right')
     metadata: Metadata | Any = Field(default=None, union_mode='left_to_right')
