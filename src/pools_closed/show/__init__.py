@@ -142,40 +142,32 @@ query ShowClips($show: String, $cursor: String) {{
 
 
 # TODO: Validate
-def _episode_seasons(collection: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return every season of a show, with the episodes that belong to it."""
-    return [
-        {
+def _seasons(collection: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return every season of a show, with its episodes followed by its clips."""
+    seasons_by_number: dict[Any, dict[str, Any]] = {
+        season["number"]: {
             "number": season["number"],
             "name": season["name"],
-            "type": "EPISODE",
             "episodeCount": season["episodeCount"]["totalCount"],
-            "episodes": season["videos"]["nodes"],
+            "episodes": list(season["videos"]["nodes"]),
         }
         for season in collection["seasons"]["nodes"]
-    ]
-
-
-# TODO: Validate
-def _clip_seasons(collection: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return every clip season of a show, with the clips that belong to it.
-
-    A clip is filed under a season of its own, numbered apart from the seasons
-    the episodes are filed under.
-    """
+    }
     clips_by_season: dict[Any, list[dict[str, Any]]] = {}
     for clip in collection["clips"]["nodes"]:
         clips_by_season.setdefault(clip["seasonNumber"], []).append(clip)
-    return [
-        {
-            "number": season["number"],
-            "name": season["name"],
-            "type": "CLIP",
-            "episodeCount": len(clips_by_season.get(season["number"], [])),
-            "episodes": clips_by_season.get(season["number"], []),
-        }
-        for season in collection["clipSeasons"]["nodes"]
-    ]
+    for clip_season in collection["clipSeasons"]["nodes"]:
+        season = seasons_by_number.setdefault(
+            clip_season["number"],
+            {
+                "number": clip_season["number"],
+                "name": clip_season["name"],
+                "episodeCount": 0,
+                "episodes": [],
+            },
+        )
+        season["episodes"] += clips_by_season.get(clip_season["number"], [])
+    return sorted(seasons_by_number.values(), key=lambda season: season["number"])
 
 
 # TODO: Validate
@@ -183,8 +175,7 @@ def extract_show(data: str) -> dict[str, Any]:
     """Parse a downloaded show into the show, its seasons and its episodes."""
     show = json.loads(data)["show"]
     collection = show["collection"] or {}
-    episode_seasons = _episode_seasons(collection) if collection else []
-    clip_seasons = _clip_seasons(collection) if collection else []
+    seasons = _seasons(collection) if collection else []
     return {
         "slug": show["slug"],
         "title": show["title"],
@@ -197,12 +188,12 @@ def extract_show(data: str) -> dict[str, Any]:
         "collectionType": collection.get("type"),
         "collectionPoster": collection.get("poster"),
         "tvRating": collection.get("tvRating"),
-        "episodeCount": sum(season["episodeCount"] for season in episode_seasons),
+        "episodeCount": sum(season["episodeCount"] for season in seasons),
         "metadata": show["metadata"],
         "hero": show["hero"],
         "theme": show["theme"],
         "marathon": show["marathon"],
-        "seasons": episode_seasons + clip_seasons,
+        "seasons": seasons,
     }
 
 

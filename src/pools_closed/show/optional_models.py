@@ -54,7 +54,6 @@ class Season(BaseModel):
     model_config = ConfigDict(extra='ignore', defer_build=True)
     number: int | Any = Field(default=None, union_mode='left_to_right')
     name: str | Any = Field(default=None, union_mode='left_to_right')
-    type: str | Any = Field(default=None, union_mode='left_to_right')
     episode_count: int | Any = Field(None, alias='episodeCount', union_mode='left_to_right')
     episodes: list[Episode] | Any = Field(default=None, union_mode='left_to_right')
 

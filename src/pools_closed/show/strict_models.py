@@ -54,7 +54,6 @@ class Season(BaseModel):
     model_config = ConfigDict(defer_build=True)
     number: int
     name: str
-    type: str
     episode_count: int = Field(..., alias='episodeCount')
     episodes: list[Episode]
 
